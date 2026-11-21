@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.responsibility.mapper.ResponsibilityMapper">
+
+    <resultMap type="Responsibility" id="ResponsibilityResult">
+        <result property="staffId"     column="staff_id"    />
+        <result property="courseId"    column="course_id"    />
+        <result property="teacherName" column="teacher_name" />
+        <result property="courseName"  column="course_name"  />
+        <result property="deptName"    column="dept_name"    />
+    </resultMap>
+
+    <sql id="selectResponsibilityVo">
+        select r.staff_id,
+               r.course_id,
+               t.teacher_name,
+               c.course_name,
+               d.dept_name
+        from responsibility r
+                 left join teacher t on r.staff_id = t.staff_id
+                 left join course c on r.course_id = c.course_id
+                 left join department d on t.dept_id = d.dept_id
+    </sql>
+
+    <select id="selectResponsibilityList" parameterType="Responsibility" resultMap="ResponsibilityResult">
+        <include refid="selectResponsibilityVo"/>
+        <where>
+            <if test="staffId != null and staffId != ''">
+                and r.staff_id = #{staffId}
+            </if>
+            <if test="courseId != null and courseId != ''">
+                and r.course_id = #{courseId}
+            </if>
+            <if test="teacherName != null and teacherName != ''">
+                and t.teacher_name like concat('%', #{teacherName}, '%')
+            </if>
+            <if test="courseName != null and courseName != ''">
+                and c.course_name like concat('%', #{courseName}, '%')
+            </if>
+            <if test="deptId != null">
+                and t.dept_id = #{deptId}
+            </if>
+        </where>
+    </select>
+
+    <select id="selectResponsibilityByStaffIdAndCourseId" resultMap="ResponsibilityResult">
+        <include refid="selectResponsibilityVo"/>
+        where r.staff_id = #{staffId} and r.course_id = #{courseId}
+    </select>
+
+    <insert id="insertResponsibility" parameterType="Responsibility">
+        insert into responsibility
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="staffId != null">staff_id,</if>
+            <if test="courseId != null">course_id,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="staffId != null">#{staffId},</if>
+            <if test="courseId != null">#{courseId},</if>
+        </trim>
+    </insert>
+
+    <update id="updateResponsibility" parameterType="Responsibility">
+        update responsibility
+        <set>
+            <if test="courseId != null">course_id = #{courseId},</if>
+        </set>
+        where staff_id = #{staffId} and course_id = #{oldCourseId}
+    </update>
+
+    <delete id="deleteResponsibilityByLogic">
+        delete from responsibility
+        where staff_id = #{staffId} and course_id = #{courseId}
+    </delete>
+
+    <delete id="deleteResponsibilityByStaffIds" parameterType="String">
+        delete from responsibility where staff_id in
+        <foreach item="staffId" collection="array" open="(" separator="," close=")">
+            #{staffId}
+        </foreach>
+    </delete>
+
+</mapper>

@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.teacher.mapper.TeacherMapper">
+
+    <resultMap type="Teacher" id="TeacherResult">
+        <result property="staffId"    column="staff_id"    />
+        <result property="teacherName"    column="teacher_name"    />
+        <result property="sex"    column="sex"    />
+        <result property="dateOfBirth"    column="date_of_birth"    />
+        <result property="professionalRank"    column="professional_rank"    />
+        <result property="deptId"    column="dept_id"    />
+        <result property="deptName"   column="dept_name"   />
+    </resultMap>
+
+    <sql id="selectTeacherVo">
+        select t.staff_id,
+               t.teacher_name,
+               t.sex,
+               t.date_of_birth,
+               t.professional_rank,
+               t.dept_id,
+               d.dept_name
+        from teacher t
+                 /* 建议使用 left join，即使没有分配学院也能查出教师基本信息 */
+                 left join department d on t.dept_id = d.dept_id
+    </sql>
+
+    <select id="selectTeacherList" parameterType="Teacher" resultMap="TeacherResult">
+        <include refid="selectTeacherVo"/>
+        <where>
+            <if test="staffId != null and staffId != ''">
+                and t.staff_id = #{staffId}
+            </if>
+            <if test="teacherName != null and teacherName != ''">
+                and t.teacher_name like concat('%', #{teacherName}, '%')
+            </if>
+            <if test="professionalRank != null and professionalRank != ''">
+                and t.professional_rank = #{professionalRank}
+            </if>
+            <if test="deptId != null">
+                and t.dept_id = #{deptId}
+            </if>
+            <if test="deptName != null and deptName != ''">
+                and d.dept_name like concat('%', #{deptName}, '%')
+            </if>
+        </where>
+    </select>
+
+    <select id="selectTeacherByStaffId" parameterType="String" resultMap="TeacherResult">
+        <include refid="selectTeacherVo"/>
+        where t.staff_id = #{staffId}
+    </select>
+
+    <insert id="insertTeacher" parameterType="Teacher">
+        insert into teacher
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="staffId != null and staffId != ''">staff_id,</if>
+            <if test="teacherName != null and teacherName != ''">teacher_name,</if>
+            <if test="sex != null and sex != ''">sex,</if>
+            <if test="dateOfBirth != null">date_of_birth,</if>
+            <if test="professionalRank != null">professional_rank,</if>
+            <if test="deptId != null">dept_id,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="staffId != null and staffId != ''">#{staffId},</if>
+            <if test="teacherName != null and teacherName != ''">#{teacherName},</if>
+            <if test="sex != null and sex != ''">#{sex},</if>
+            <if test="dateOfBirth != null">#{dateOfBirth},</if>
+            <if test="professionalRank != null">#{professionalRank},</if>
+            <if test="deptId != null">#{deptId},</if>
+        </trim>
+    </insert>
+
+    <update id="updateTeacher" parameterType="Teacher">
+        update teacher
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="teacherName != null and teacherName != ''">teacher_name = #{teacherName},</if>
+            <if test="sex != null and sex != ''">sex = #{sex},</if>
+            <if test="dateOfBirth != null">date_of_birth = #{dateOfBirth},</if>
+            <if test="professionalRank != null">professional_rank = #{professionalRank},</if>
+            <if test="deptId != null">dept_id = #{deptId},</if>
+        </trim>
+        where staff_id = #{staffId}
+    </update>
+
+    <delete id="deleteTeacherByStaffId" parameterType="String">
+        delete from teacher where staff_id = #{staffId}
+    </delete>
+
+    <delete id="deleteTeacherByStaffIds" parameterType="String">
+        delete from teacher where staff_id in
+        <foreach item="staffId" collection="array" open="(" separator="," close=")">
+            #{staffId}
+        </foreach>
+    </delete>
+
+    <select id="selectTeacherCount" resultType="Long">
+        select count(*) from teacher
+    </select>
+
+    <select id="selectTeacherCountByDept" resultType="java.util.HashMap">
+        select d.dept_name as name, count(t.staff_id) as value
+        from department d
+            left join teacher t on d.dept_id = t.dept_id
+        group by d.dept_name
+    </select>
+
+    <select id="selectTeacherTitleDistribution" resultType="java.util.HashMap">
+        select professional_rank as name, count(*) as value
+        from teacher
+        where professional_rank is not null and professional_rank != ''
+        group by professional_rank
+    </select>
+
+    <select id="selectTeacherClassStats" parameterType="String" resultType="Teacher">
+        SELECT
+            c.class_id AS classId,
+            -- 1. 平时成绩分布 (映射到 normalLow, normalMid, normalHigh)
+            SUM(CASE WHEN cs.normal_score &lt; 60 THEN 1 ELSE 0 END) AS normalLow,
+            SUM(CASE WHEN cs.normal_score >= 60 AND cs.normal_score &lt; 85 THEN 1 ELSE 0 END) AS normalMid,
+            SUM(CASE WHEN cs.normal_score >= 85 THEN 1 ELSE 0 END) AS normalHigh,
+
+            -- 2. 期末成绩分布 (映射到 testFail, testPass, testGood, testExcellent)
+            SUM(CASE WHEN cs.test_score &lt; 60 THEN 1 ELSE 0 END) AS testFail,
+            SUM(CASE WHEN cs.test_score >= 60 AND cs.test_score &lt; 70 THEN 1 ELSE 0 END) AS testPass,
+            SUM(CASE WHEN cs.test_score >= 70 AND cs.test_score &lt; 85 THEN 1 ELSE 0 END) AS testGood,
+            SUM(CASE WHEN cs.test_score >= 85 THEN 1 ELSE 0 END) AS testExcellent,
+
+            -- 3. GPA分布 (映射到 gpa0, gpa12, gpa23, gpa34)
+            SUM(CASE WHEN cs.gpa = 0.0 THEN 1 ELSE 0 END) AS gpa0,
+            SUM(CASE WHEN cs.gpa >= 1.0 AND cs.gpa &lt;= 2.3 THEN 1 ELSE 0 END) AS gpa12,
+            SUM(CASE WHEN cs.gpa >= 2.7 AND cs.gpa &lt;= 3.3 THEN 1 ELSE 0 END) AS gpa23,
+            SUM(CASE WHEN cs.gpa >= 3.7 AND cs.gpa &lt;= 4.0 THEN 1 ELSE 0 END) AS gpa34
+        FROM course_selection cs, course_class c
+        WHERE cs.class_id = c.class_id
+          AND c.staff_id = #{staffId}
+        GROUP BY c.class_id
+    </select>
+</mapper>

@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.courseselection.mapper.CourseSelectionMapper">
+
+    <resultMap type="CourseSelection" id="CourseSelectionResult">
+        <result property="studentId"    column="student_id"    />
+        <result property="semester"     column="semester"      />
+        <result property="courseId"     column="course_id"     />
+        <result property="staffId"      column="staff_id"      />
+        <result property="classId"      column="class_id"      />
+        <result property="normalScore"  column="normal_score"  />
+        <result property="testScore"    column="test_score"    />
+        <result property="totalScore"   column="total_score"   />
+        <result property="gpa"          column="gpa"           />
+        <result property="studentName"  column="student_name"  />
+        <result property="courseName"   column="course_name"   />
+        <result property="staffName"    column="staff_name"    />
+        <result property="dayOfWeek"    column="day_of_week"   />
+        <result property="startPeriod"  column="start_period"  />
+        <result property="endPeriod"    column="end_period"    />
+    </resultMap>
+
+    <sql id="selectCourseSelectionVo">
+        select cs.student_id, cs.semester, cs.course_id, cs.staff_id, cs.class_id,
+               cs.normal_score, cs.test_score, cs.total_score, cs.gpa,
+               s.student_name,
+               c.course_name,
+               t.teacher_name as staff_name,
+               cc.day_of_week,
+               cc.start_period,
+               cc.end_period
+        from course_selection cs
+                 left join student s on cs.student_id = s.student_id
+                 left join course c on cs.course_id = c.course_id
+                 left join teacher t on cs.staff_id = t.staff_id
+                 left join course_class cc on cs.class_id = cc.class_id
+    </sql>
+
+    <select id="selectCourseSelectionList" parameterType="CourseSelection" resultMap="CourseSelectionResult">
+        <include refid="selectCourseSelectionVo"/>
+        <where>
+            <if test="studentId != null and studentId != ''"> and cs.student_id = #{studentId}</if>
+            <if test="classId != null and classId != ''"> and cs.class_id = #{classId}</if>
+            <if test="courseId != null and courseId != ''"> and cs.course_id = #{courseId}</if>
+            <if test="staffId != null and staffId != ''"> and cs.staff_id = #{staffId}</if>
+            <if test="semester != null and semester != ''"> and cs.semester = #{semester}</if>
+
+            <if test="params.currentStaffId != null and params.currentStaffId != ''">
+                and cc.staff_id = #{params.currentStaffId}
+            </if>
+
+            <if test="studentName != null and studentName != ''">
+                and s.student_name like concat('%', #{studentName}, '%')
+            </if>
+            <if test="courseName != null and courseName != ''">
+                and c.course_name like concat('%', #{courseName}, '%')
+            </if>
+            <if test="staffName != null and staffName != ''">
+                and t.teacher_name like concat('%', #{staffName}, '%')
+            </if>
+        </where>
+    </select>
+
+    <select id="selectCourseSelectionByCompoundKey" resultMap="CourseSelectionResult">
+        <include refid="selectCourseSelectionVo"/>
+        where cs.student_id = #{studentId} and cs.class_id = #{classId}
+    </select>
+
+    <select id="countHistorySelection" resultType="Integer">
+        select count(1)
+        from course_selection
+        where student_id = #{studentId}
+          and course_id = #{courseId}
+    </select>
+
+    <insert id="insertCourseSelection" parameterType="CourseSelection">
+        insert into course_selection
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="studentId != null and studentId != ''">student_id,</if>
+            <if test="semester != null and semester != ''">semester,</if>
+            <if test="courseId != null and courseId != ''">course_id,</if>
+            <if test="staffId != null and staffId != ''">staff_id,</if>
+            <if test="classId != null and classId != ''">class_id,</if>
+            <if test="normalScore != null">normal_score,</if>
+            <if test="testScore != null">test_score,</if>
+            <if test="totalScore != null">total_score,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="studentId != null and studentId != ''">#{studentId},</if>
+            <if test="semester != null and semester != ''">#{semester},</if>
+            <if test="courseId != null and courseId != ''">#{courseId},</if>
+            <if test="staffId != null and staffId != ''">#{staffId},</if>
+            <if test="classId != null and classId != ''">#{classId},</if>
+            <if test="normalScore != null">#{normalScore},</if>
+            <if test="testScore != null">#{testScore},</if>
+            <if test="totalScore != null">#{totalScore},</if>
+        </trim>
+    </insert>
+
+    <update id="updateCourseSelection" parameterType="CourseSelection">
+        update course_selection
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="normalScore != null">normal_score = #{normalScore},</if>
+            <if test="testScore != null">test_score = #{testScore},</if>
+            <if test="totalScore != null">total_score = #{totalScore},</if>
+            <if test="gpa != null">gpa = #{gpa},</if>
+        </trim>
+        where student_id = #{studentId} and class_id = #{classId}
+    </update>
+
+    <delete id="deleteCourseSelectionByCompoundKey">
+        delete from course_selection where student_id = #{studentId} and class_id = #{classId}
+    </delete>
+
+    <delete id="deleteCourseSelectionByStudentIds" parameterType="String">
+        delete from course_selection where student_id in
+        <foreach item="studentId" collection="array" open="(" separator="," close=")">
+            #{studentId}
+        </foreach>
+    </delete>
+
+    <select id="countSelectionByClassId" parameterType="String" resultType="int">
+        select count(1) from course_selection where class_id = #{classId}
+    </select>
+</mapper>

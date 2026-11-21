@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.student.mapper.StudentMapper">
+
+    <resultMap type="Student" id="StudentResult">
+        <result property="studentId"    column="student_id"    />
+        <result property="studentName"    column="student_name"    />
+        <result property="sex"    column="sex"    />
+        <result property="dateOfBirth"    column="date_of_birth"    />
+        <result property="mobilePhone"    column="mobile_phone"    />
+        <result property="deptId"    column="dept_id"    />
+        <result property="deptName"    column="dept_name"    />
+        <result property="semesterName" column="semester_name" />
+        <result property="totalCredits" column="total_credits" />
+        <result property="earnedCredits" column="earned_credits" />
+        <result property="avgGpa" column="avg_gpa" />
+        <result property="sortOrder" column="sort_order" />
+    </resultMap>
+
+    <sql id="selectStudentVo">
+        select s.student_id, s.student_name, s.sex, s.date_of_birth, s.mobile_phone, s.dept_id, d.dept_name
+        from student s
+                 left join department d on s.dept_id = d.dept_id
+    </sql>
+
+    <select id="selectStudentList" parameterType="Student" resultMap="StudentResult">
+        <include refid="selectStudentVo"/>
+        <where>
+            <if test="studentId != null and studentId != ''">
+                and s.student_id = #{studentId}
+            </if>
+            <if test="studentName != null and studentName != ''">
+                and s.student_name like concat('%', #{studentName}, '%')
+            </if>
+            <if test="deptId != null">
+                and s.dept_id = #{deptId}
+            </if>
+            <if test="deptName != null and deptName != ''">
+                and d.dept_name like concat('%', #{deptName}, '%')
+            </if>
+        </where>
+    </select>
+
+    <select id="selectStudentByStudentId" parameterType="String" resultMap="StudentResult">
+        <include refid="selectStudentVo"/>
+        where s.student_id = #{studentId}
+    </select>
+
+    <insert id="insertStudent" parameterType="Student">
+        insert into student
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="studentId != null">student_id,</if>
+            <if test="studentName != null and studentName != ''">student_name,</if>
+            <if test="sex != null">sex,</if>
+            <if test="dateOfBirth != null">date_of_birth,</if>
+            <if test="mobilePhone != null">mobile_phone,</if>
+            <if test="deptId != null">dept_id,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="studentId != null">#{studentId},</if>
+            <if test="studentName != null and studentName != ''">#{studentName},</if>
+            <if test="sex != null">#{sex},</if>
+            <if test="dateOfBirth != null">#{dateOfBirth},</if>
+            <if test="mobilePhone != null">#{mobilePhone},</if>
+            <if test="deptId != null">#{deptId},</if>
+        </trim>
+    </insert>
+
+    <update id="updateStudent" parameterType="Student">
+        update student
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="studentName != null and studentName != ''">student_name = #{studentName},</if>
+            <if test="sex != null">sex = #{sex},</if>
+            <if test="dateOfBirth != null">date_of_birth = #{dateOfBirth},</if>
+            <if test="mobilePhone != null">mobile_phone = #{mobilePhone},</if>
+            <if test="deptId != null">dept_id = #{deptId},</if>
+        </trim>
+        where student_id = #{studentId}
+    </update>
+
+    <delete id="deleteStudentByStudentId" parameterType="String">
+        delete from student where student_id = #{studentId}
+    </delete>
+
+    <delete id="deleteStudentByStudentIds" parameterType="String">
+        delete from student where student_id in
+        <foreach item="studentId" collection="array" open="(" separator="," close=")">
+            #{studentId}
+        </foreach>
+    </delete>
+
+    <select id="selectStudentCount" resultType="Long">
+        select count(*) from student
+    </select>
+
+    <select id="selectStudentCountByDept" resultType="java.util.HashMap">
+        select d.dept_name as name, count(s.student_id) as value
+        from department d
+            left join student s on d.dept_id = s.dept_id
+        group by d.dept_name
+    </select>
+
+    <select id="selectStudentGpaStats" parameterType="String" resultMap="StudentResult">
+        (SELECT
+             semester AS semester_name,
+             SUM((SELECT credit FROM course WHERE course_id = cs.course_id)) AS total_credits,
+             SUM(CASE WHEN gpa > 0 THEN (SELECT credit FROM course WHERE course_id = cs.course_id) ELSE 0 END) AS earned_credits,
+             ROUND(
+                     SUM(gpa * (SELECT credit FROM course WHERE course_id = cs.course_id))
+                         /
+                     SUM((SELECT credit FROM course WHERE course_id = cs.course_id)),
+                     2) AS avg_gpa,
+             1 AS sort_order
+         FROM course_selection cs
+         WHERE student_id = #{studentId}
+         GROUP BY semester)
+
+        UNION ALL
+
+        (SELECT
+             '个人总计' AS semester_name,
+             SUM((SELECT credit FROM course WHERE course_id = cs.course_id)) AS total_credits,
+             SUM(CASE WHEN gpa > 0 THEN (SELECT credit FROM course WHERE course_id = cs.course_id) ELSE 0 END) AS earned_credits,
+             ROUND(
+                     SUM(gpa * (SELECT credit FROM course WHERE course_id = cs.course_id))
+                         /
+                     SUM((SELECT credit FROM course WHERE course_id = cs.course_id)),
+                     2) AS avg_gpa,
+             2 AS sort_order
+         FROM course_selection cs
+         WHERE student_id = #{studentId})
+
+        ORDER BY sort_order ASC, semester_name DESC
+    </select>
+</mapper>

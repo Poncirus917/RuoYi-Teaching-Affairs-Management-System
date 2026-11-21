@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.courseselection.mapper.CourseSelectionMapper">
+    
+    <resultMap type="CourseSelection" id="CourseSelectionResult">
+        <result property="studentId"    column="student_id"    />
+        <result property="semester"    column="semester"    />
+        <result property="courseId"    column="course_id"    />
+        <result property="staffId"    column="staff_id"    />
+        <result property="classId"    column="class_id"    />
+        <result property="normalScore"    column="normal_score"    />
+        <result property="testScore"    column="test_score"    />
+        <result property="totalScore"    column="total_score"    />
+    </resultMap>
+
+    <sql id="selectCourseSelectionVo">
+        select student_id, semester, course_id, staff_id, class_id, normal_score, test_score, total_score from course_selection
+    </sql>
+
+    <select id="selectCourseSelectionList" parameterType="CourseSelection" resultMap="CourseSelectionResult">
+        <include refid="selectCourseSelectionVo"/>
+        <where>  
+            <if test="studentId != null  and studentId != ''"> and student_id = #{studentId}</if>
+            <if test="semester != null  and semester != ''"> and semester = #{semester}</if>
+            <if test="courseId != null  and courseId != ''"> and course_id = #{courseId}</if>
+            <if test="staffId != null  and staffId != ''"> and staff_id = #{staffId}</if>
+            <if test="classId != null  and classId != ''"> and class_id = #{classId}</if>
+        </where>
+    </select>
+    
+    <select id="selectCourseSelectionByStudentId" parameterType="String" resultMap="CourseSelectionResult">
+        <include refid="selectCourseSelectionVo"/>
+        where student_id = #{studentId}
+    </select>
+
+    <insert id="insertCourseSelection" parameterType="CourseSelection">
+        insert into course_selection
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="studentId != null and studentId != ''">student_id,</if>
+            <if test="semester != null and semester != ''">semester,</if>
+            <if test="courseId != null and courseId != ''">course_id,</if>
+            <if test="staffId != null and staffId != ''">staff_id,</if>
+            <if test="classId != null and classId != ''">class_id,</if>
+            <if test="normalScore != null">normal_score,</if>
+            <if test="testScore != null">test_score,</if>
+            <if test="totalScore != null">total_score,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="studentId != null and studentId != ''">#{studentId},</if>
+            <if test="semester != null and semester != ''">#{semester},</if>
+            <if test="courseId != null and courseId != ''">#{courseId},</if>
+            <if test="staffId != null and staffId != ''">#{staffId},</if>
+            <if test="classId != null and classId != ''">#{classId},</if>
+            <if test="normalScore != null">#{normalScore},</if>
+            <if test="testScore != null">#{testScore},</if>
+            <if test="totalScore != null">#{totalScore},</if>
+         </trim>
+    </insert>
+
+    <update id="updateCourseSelection" parameterType="CourseSelection">
+        update course_selection
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="semester != null and semester != ''">semester = #{semester},</if>
+            <if test="courseId != null and courseId != ''">course_id = #{courseId},</if>
+            <if test="staffId != null and staffId != ''">staff_id = #{staffId},</if>
+            <if test="classId != null and classId != ''">class_id = #{classId},</if>
+            <if test="normalScore != null">normal_score = #{normalScore},</if>
+            <if test="testScore != null">test_score = #{testScore},</if>
+            <if test="totalScore != null">total_score = #{totalScore},</if>
+        </trim>
+        where student_id = #{studentId}
+    </update>
+
+    <delete id="deleteCourseSelectionByStudentId" parameterType="String">
+        delete from course_selection where student_id = #{studentId}
+    </delete>
+
+    <delete id="deleteCourseSelectionByStudentIds" parameterType="String">
+        delete from course_selection where student_id in 
+        <foreach item="studentId" collection="array" open="(" separator="," close=")">
+            #{studentId}
+        </foreach>
+    </delete>
+</mapper>

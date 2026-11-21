@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.courseclass.mapper.CourseClassMapper">
+
+    <resultMap type="CourseClass" id="CourseClassResult">
+        <result property="classId"    column="class_id"    />
+        <result property="courseId"    column="course_id"    />
+        <result property="staffId"    column="staff_id"    />
+        <result property="semester"    column="semester"    />
+        <result property="classroom"    column="classroom"    />
+        <result property="capacity"    column="capacity"    />
+        <result property="selectedNum"    column="selected_num"    />
+        <result property="dayOfWeek"    column="day_of_week"    />
+        <result property="startPeriod"    column="start_period"    />
+        <result property="endPeriod"    column="end_period"    />
+        <result property="courseName" column="course_name"  />
+        <result property="staffName"  column="staff_name"   />
+        <result property="deptId"     column="dept_id"      />
+    </resultMap>
+
+    <sql id="selectCourseClassVo">
+        select c.class_id, c.course_id, c.staff_id, c.semester, c.classroom, c.capacity,
+            /* 核心修改点：不再直接取 c.selected_num，而是通过子查询实时统计选课表人数 */
+               (select count(*) from course_selection cs where cs.class_id = c.class_id) as selected_num,
+               c.day_of_week, c.start_period, c.end_period,
+               co.course_name,
+               t.teacher_name as staff_name,
+               t.dept_id
+        from course_class c
+                 left join course co on c.course_id = co.course_id
+                 left join teacher t on c.staff_id = t.staff_id
+    </sql>
+
+    <select id="selectCourseClassList" parameterType="CourseClass" resultMap="CourseClassResult">
+        <include refid="selectCourseClassVo"/>
+        <where>
+            <if test="classId != null  and classId != ''"> and c.class_id = #{classId}</if>
+            <if test="courseId != null  and courseId != ''"> and c.course_id = #{courseId}</if>
+            <if test="staffId != null  and staffId != ''"> and c.staff_id = #{staffId}</if>
+            <if test="semester != null  and semester != ''"> and c.semester = #{semester}</if>
+            <if test="dayOfWeek != null "> and c.day_of_week = #{dayOfWeek}</if>
+
+            <if test="deptId != null"> and t.dept_id = #{deptId}</if>
+
+            <if test="courseName != null and courseName != ''">
+                and co.course_name like concat('%', #{courseName}, '%')
+            </if>
+            <if test="staffName != null and staffName != ''">
+                and t.teacher_name like concat('%', #{staffName}, '%')
+            </if>
+        </where>
+    </select>
+
+    <select id="selectCourseClassByClassId" parameterType="String" resultMap="CourseClassResult">
+        <include refid="selectCourseClassVo"/>
+        where c.class_id = #{classId}
+    </select>
+
+    <insert id="insertCourseClass" parameterType="CourseClass">
+        insert into course_class
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="classId != null and classId != ''">class_id,</if>
+            <if test="courseId != null and courseId != ''">course_id,</if>
+            <if test="staffId != null and staffId != ''">staff_id,</if>
+            <if test="semester != null and semester != ''">semester,</if>
+            <if test="classroom != null">classroom,</if>
+            <if test="capacity != null">capacity,</if>
+            <if test="selectedNum != null">selected_num,</if>
+            <if test="dayOfWeek != null">day_of_week,</if>
+            <if test="startPeriod != null">start_period,</if>
+            <if test="endPeriod != null">end_period,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="classId != null and classId != ''">#{classId},</if>
+            <if test="courseId != null and courseId != ''">#{courseId},</if>
+            <if test="staffId != null and staffId != ''">#{staffId},</if>
+            <if test="semester != null and semester != ''">#{semester},</if>
+            <if test="classroom != null">#{classroom},</if>
+            <if test="capacity != null">#{capacity},</if>
+            <if test="selectedNum != null">#{selectedNum},</if>
+            <if test="dayOfWeek != null">#{dayOfWeek},</if>
+            <if test="startPeriod != null">#{startPeriod},</if>
+            <if test="endPeriod != null">#{endPeriod},</if>
+        </trim>
+    </insert>
+
+    <update id="updateCourseClass" parameterType="CourseClass">
+        update course_class
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="courseId != null and courseId != ''">course_id = #{courseId},</if>
+            <if test="staffId != null and staffId != ''">staff_id = #{staffId},</if>
+            <if test="semester != null and semester != ''">semester = #{semester},</if>
+            <if test="classroom != null">classroom = #{classroom},</if>
+            <if test="capacity != null">capacity = #{capacity},</if>
+            <if test="selectedNum != null">selected_num = #{selectedNum},</if>
+            <if test="dayOfWeek != null">day_of_week = #{dayOfWeek},</if>
+            <if test="startPeriod != null">start_period = #{startPeriod},</if>
+            <if test="endPeriod != null">end_period = #{endPeriod},</if>
+        </trim>
+        where class_id = #{classId}
+    </update>
+
+    <delete id="deleteCourseClassByClassId" parameterType="String">
+        delete from course_class where class_id = #{classId}
+    </delete>
+
+    <delete id="deleteCourseClassByClassIds" parameterType="String">
+        delete from course_class where class_id in
+        <foreach item="classId" collection="array" open="(" separator="," close=")">
+            #{classId}
+        </foreach>
+    </delete>
+</mapper>
