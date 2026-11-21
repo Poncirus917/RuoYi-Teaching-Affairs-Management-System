@@ -98,8 +98,5 @@
 默认管理员账号见 RuoYi 脚手架文档。
 
 ## 已知问题
-
-- **选课人数同步**：`trg_courseselection_insert` 由 `AFTER INSERT` 改为 `BEFORE INSERT` 做冲突校验后，
-  原先人数自增的逻辑随之失效，需补一个 `AFTER INSERT` 触发器或在应用层处理。
 - 排课冲突目前完全依赖触发器，高并发场景下建议在应用层加乐观锁或唯一索引兜底。
 - 仓库不含真实学生数据，`student_info.sql` 中的账号仅为 RuoYi 脚手架演示数据。
